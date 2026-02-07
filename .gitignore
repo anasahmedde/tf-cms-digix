@@ -1,0 +1,101 @@
+############################################
+# Terragrunt / Terraform
+############################################
+
+# Terragrunt cache
+.terragrunt-cache/
+**/.terragrunt-cache/
+
+# Terraform working directory
+.terraform/
+**/.terraform/
+
+# Terraform state
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Terraform plan files
+*.tfplan
+*.plan
+
+# Provider / dependency lock file (RECOMMENDED to COMMIT)
+# If you want to commit it (recommended), keep this line commented.
+# .terraform.lock.hcl
+
+# Terraform CLI config files (often contain credentials)
+.terraformrc
+terraform.rc
+
+############################################
+# Terragrunt generated / temp
+############################################
+
+# If you use generate blocks that write files you DON'T want tracked,
+# add patterns here. Many teams DO commit generated files, so keep this conservative.
+# Example:
+# **/*_generated.tf
+# **/provider_override.tf
+
+############################################
+# Sensitive files / common secrets
+############################################
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Credentials & keys
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.kubeconfig
+*credentials*
+*secret*
+secrets*.yml
+secrets*.yaml
+secrets*.json
+
+# Terraform variables that may contain secrets (optional)
+# Many teams keep tfvars out of git and commit *.tfvars.example instead.
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+!*.tfvars.json.example
+
+############################################
+# Logs / temp
+############################################
+*.log
+tmp/
+temp/
+.cache/
+.DS_Store
+
+############################################
+# Editor / IDE
+############################################
+.vscode/
+.idea/
+*.iml
+
+# Local history/plugins
+.history/
+.terraform.d/
+**/.terraform.d/
+
+############################################
+# OS / tooling
+############################################
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+############################################
+# Optional: if you vendor modules locally (usually not)
+############################################
+# modules/

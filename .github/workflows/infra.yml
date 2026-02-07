@@ -72,7 +72,8 @@ jobs:
 
       - name: Plan ${{ matrix.layer }}
         working-directory: terragrunt/environments/${{ matrix.layer }}
-        run: terragrunt run-all plan --terragrunt-non-interactive 2>&1 | tee plan.txt
+        run: |
+          terragrunt run-all plan --terragrunt-non-interactive 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | tee plan.txt
 
       - name: Comment PR
         if: github.event_name == 'pull_request'

@@ -53,4 +53,7 @@ inputs = {
   # S3 data bucket
   s3_bucket = dependency.s3_data.outputs.bucket_name
   s3_region = dependency.s3_data.outputs.bucket_region
+
+  # CORS — allow production frontend
+  cors_origins = "https://cms.wizioners.com,http://localhost:3000"
 }

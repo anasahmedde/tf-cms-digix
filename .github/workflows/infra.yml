@@ -2,10 +2,33 @@
 name: Infrastructure
 
 on:
+  # Manual trigger — run plan on demand
+  workflow_dispatch:
+    inputs:
+      layer:
+        description: 'Which layer to plan'
+        required: true
+        type: choice
+        options:
+          - shared
+          - staging
+          - production
+          - all
+      action:
+        description: 'Plan or Apply'
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+
+  # Auto plan on PR
+  pull_request:
+    paths: ['terragrunt/**', 'terraform/**']
+
+  # Auto apply on merge to main
   push:
     branches: [main]
-    paths: ['terragrunt/**', 'terraform/**']
-  pull_request:
     paths: ['terragrunt/**', 'terraform/**']
 
 env:
@@ -18,31 +41,41 @@ permissions:
   contents: read
   pull-requests: write
 
+# ─── PLAN: on PR or manual trigger with action=plan ───
 jobs:
   plan:
-    if: github.event_name == 'pull_request'
+    if: >
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'plan')
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        layer: [shared, staging, production]
+        layer: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.layer != 'all' && fromJSON(format('["{0}"]', github.event.inputs.layer)) || fromJSON('["shared","staging","production"]') }}
     steps:
       - uses: actions/checkout@v4
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
+
       - name: Setup Terragrunt
         run: |
           wget -q https://github.com/gruntwork-io/terragrunt/releases/download/v${{ env.TG_VERSION }}/terragrunt_linux_amd64
           chmod +x terragrunt_linux_amd64
           sudo mv terragrunt_linux_amd64 /usr/local/bin/terragrunt
-      - name: Plan
+
+      - name: Plan ${{ matrix.layer }}
         working-directory: terragrunt/environments/${{ matrix.layer }}
         run: terragrunt run-all plan --terragrunt-non-interactive 2>&1 | tee plan.txt
+
       - name: Comment PR
+        if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
@@ -56,49 +89,94 @@ jobs:
               body: `## 📋 Plan: ${{ matrix.layer }}\n\`\`\`\n${truncated}\n\`\`\``
             });
 
+      - name: Upload plan output
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: plan-${{ matrix.layer }}
+          path: terragrunt/environments/${{ matrix.layer }}/plan.txt
+          retention-days: 7
+
+  # ─── APPLY: on merge to main or manual trigger with action=apply ───
   apply-shared:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply' && (github.event.inputs.layer == 'shared' || github.event.inputs.layer == 'all'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
+
       - name: Setup Terragrunt
         run: |
           wget -q https://github.com/gruntwork-io/terragrunt/releases/download/v${{ env.TG_VERSION }}/terragrunt_linux_amd64
           chmod +x terragrunt_linux_amd64
           sudo mv terragrunt_linux_amd64 /usr/local/bin/terragrunt
+
       - name: Apply shared
         working-directory: terragrunt/environments/shared
         run: terragrunt run-all apply --terragrunt-non-interactive
 
-  apply-envs:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  apply-staging:
+    if: >
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply' && (github.event.inputs.layer == 'staging' || github.event.inputs.layer == 'all'))
     needs: apply-shared
     runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 1
-      matrix:
-        environment: [staging, production]
     steps:
       - uses: actions/checkout@v4
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
+
       - name: Setup Terragrunt
         run: |
           wget -q https://github.com/gruntwork-io/terragrunt/releases/download/v${{ env.TG_VERSION }}/terragrunt_linux_amd64
           chmod +x terragrunt_linux_amd64
           sudo mv terragrunt_linux_amd64 /usr/local/bin/terragrunt
-      - name: Apply ${{ matrix.environment }}
-        working-directory: terragrunt/environments/${{ matrix.environment }}
+
+      - name: Apply staging
+        working-directory: terragrunt/environments/staging
+        run: terragrunt run-all apply --terragrunt-non-interactive
+
+  apply-production:
+    if: >
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply' && (github.event.inputs.layer == 'production' || github.event.inputs.layer == 'all'))
+    needs: apply-staging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Setup Terragrunt
+        run: |
+          wget -q https://github.com/gruntwork-io/terragrunt/releases/download/v${{ env.TG_VERSION }}/terragrunt_linux_amd64
+          chmod +x terragrunt_linux_amd64
+          sudo mv terragrunt_linux_amd64 /usr/local/bin/terragrunt
+
+      - name: Apply production
+        working-directory: terragrunt/environments/production
         run: terragrunt run-all apply --terragrunt-non-interactive

@@ -34,6 +34,12 @@ variable "s3_region" {
   default = "eu-west-1"
 }
 
+# CORS
+variable "cors_origins" {
+  type    = string
+  default = "*"
+}
+
 # Fargate sizing
 variable "cpu" {
   type    = number
@@ -200,6 +206,7 @@ resource "aws_ecs_task_definition" "main" {
       { name = "AWS_REGION",   value = var.s3_region },
       { name = "ENVIRONMENT",  value = var.environment },
       { name = "PORT",         value = tostring(var.container_port) },
+      { name = "CORS_ORIGINS", value = var.cors_origins },
     ]
 
     secrets = [{

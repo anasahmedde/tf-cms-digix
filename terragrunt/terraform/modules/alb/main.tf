@@ -71,7 +71,7 @@ resource "aws_lb_target_group" "staging" {
   target_type = "ip"
 
   health_check {
-    path                = "/docs"
+    path                = "/health"
     healthy_threshold   = 2
     unhealthy_threshold = 3
     timeout             = 10
@@ -90,7 +90,7 @@ resource "aws_lb_target_group" "production" {
   target_type = "ip"
 
   health_check {
-    path                = "/docs"
+    path                = "/health"
     healthy_threshold   = 2
     unhealthy_threshold = 3
     timeout             = 10

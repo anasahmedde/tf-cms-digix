@@ -31,29 +31,29 @@ inputs = {
   vpc_id             = dependency.vpc.outputs.vpc_id
   private_subnet_ids = dependency.vpc.outputs.private_subnet_ids
 
-  # Shared ALB — production target group
+  # Shared ALB — staging target group
   alb_security_group_id = dependency.alb.outputs.alb_security_group_id
-  target_group_arn      = dependency.alb.outputs.production_target_group_arn
+  target_group_arn      = dependency.alb.outputs.staging_target_group_arn
 
   # ECR
   ecr_repository_url = dependency.ecr.outputs.repository_url
 
-  # Production database on shared RDS
+  # Staging database on shared RDS
   db_address          = dependency.rds.outputs.db_address
   db_port             = dependency.rds.outputs.db_port
-  db_name             = dependency.rds.outputs.production_db_name
-  db_username         = dependency.rds.outputs.production_db_username
-  db_password_ssm_arn = dependency.rds.outputs.production_db_password_ssm_arn
+  db_name             = dependency.rds.outputs.staging_db_name
+  db_username         = dependency.rds.outputs.staging_db_username
+  db_password_ssm_arn = dependency.rds.outputs.staging_db_password_ssm_arn
 
-  # Production sizing
-  cpu           = 512
-  memory        = 1024
+  # Smallest Fargate
+  cpu           = 256
+  memory        = 512
   desired_count = 1
 
   # S3 data bucket
   s3_bucket = dependency.s3_data.outputs.bucket_name
   s3_region = dependency.s3_data.outputs.bucket_region
 
-  # CORS — allow production frontend
-  cors_origins = "https://cms.wizioners.com,http://localhost:3000"
+  # CORS — allow staging frontend
+  cors_origins = "https://staging-cms.wizioners.com,http://localhost:3000"
 }

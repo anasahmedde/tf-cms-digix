@@ -20,6 +20,6 @@ locals {
 }
 
 inputs = {
-  domain                    = local.account_vars.locals.domain   # cms.wizioners.com (root)
+  domain                    = "cms.${local.account_vars.locals.domain}"
   cloudfront_certificate_arn = dependency.dns_ssl.outputs.cloudfront_certificate_arn
 }

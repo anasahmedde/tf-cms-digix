@@ -56,7 +56,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   price_class         = "PriceClass_100"
   comment             = "${local.name_prefix} React frontend"
 
-  aliases = local.has_domain ? "api-staging-cms.${var.domain}" : []
+  aliases = local.has_domain ? [var.domain] : []
 
   origin {
     domain_name              = aws_s3_bucket.frontend.bucket_regional_domain_name
